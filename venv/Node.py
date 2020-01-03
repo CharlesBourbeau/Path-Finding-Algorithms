@@ -3,6 +3,11 @@ class Node:
     h_value = 0
     g_value = 0
 
+    f_value = 0
+
+    # initialize the parent node used to compute the g_value and reconstruct the path
+    parent_node = None
+
     # initialize the coordinate values
     # these value will be adjusted once a node is added to the grid
     x_cord = 0
@@ -40,10 +45,15 @@ class Node:
             x_difference -= y_difference
             self.h_value += x_difference * 10
 
-    def compute_g_value(self, start_node):
+    def compute_g_value(self, parent_node):
+        # if the parent node is node, it if the start node and the g value is 0
+        if parent_node is None:
+            self.g_value = 0
+            return
+
         # we first determine if we should reduce the y difference or the x difference
-        x_difference = abs(self.x_cord - start_node.x_cord)
-        y_difference = abs(self.y_cord - start_node.y_cord)
+        x_difference = abs(self.x_cord - parent_node.x_cord)
+        y_difference = abs(self.y_cord - parent_node.y_cord)
         if x_difference < y_difference:
             # we want to decrease x diagonally and then y laterally
             self.g_value = x_difference * 14
@@ -60,6 +70,13 @@ class Node:
             x_difference -= y_difference
             self.g_value += x_difference * 10
 
-    def compute_g_and_h(self, start_node, target_node):
-        self.compute_g_value(start_node)
+        # now we add the parent g value to this value to update the path
+        if parent_node is not None:
+            self.g_value += parent_node.g_value
+
+    def compute_g_h_f(self, parent_node, target_node):
+        self.compute_g_value(parent_node)
         self.compute_h_value(target_node)
+        self.f_value = self.g_value + self.h_value
+
+
