@@ -119,7 +119,7 @@ def get_neighbours(node):
 
 
 declare_starting_node(0, 0)
-declare_target_node(0, HEIGHT_OF_GRID - 1)
+declare_target_node(HEIGHT_OF_GRID - 3, HEIGHT_OF_GRID - 1)
 starting_node.compute_g_h_f(None, target_node)
 target_node.compute_g_h_f(None, target_node)
 
@@ -195,6 +195,7 @@ def draw_path():
         print("(x,y) : (%d, %d)" % (current_node.x_cord, current_node.y_cord))
         current_node = current_node.parent_node
     print("(x,y) : (%d, %d)" % (current_node.x_cord, current_node.y_cord))
+
 
 a_star_algorithm()
 draw_path()
