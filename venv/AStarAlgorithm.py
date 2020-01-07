@@ -1,4 +1,10 @@
 from Node import Node
+from tkinter import *
+from View import Grid
+
+root = Tk()
+
+g = Grid(root, 10, 10)
 
 WIDTH_OF_GRID = 10   # type: int
 HEIGHT_OF_GRID = 10  # type: int
@@ -193,12 +199,23 @@ def draw_path():
     current_node = target_node
     while current_node.parent_node is not None:
         print("(x,y) : (%d, %d)" % (current_node.x_cord, current_node.y_cord))
+        modify_label("white", current_node.x_cord, current_node.y_cord)
         current_node = current_node.parent_node
     print("(x,y) : (%d, %d)" % (current_node.x_cord, current_node.y_cord))
+    modify_label("white", current_node.x_cord, current_node.y_cord)
+
+
+def modify_label(color, grid_x, grid_y):
+    index = HEIGHT_OF_GRID * grid_y + grid_x
+    print(index)
+    label = g.labels[index]
+    label.config(bg="%s" % color)
 
 
 a_star_algorithm()
 draw_path()
+
+root.mainloop()
 
 
 

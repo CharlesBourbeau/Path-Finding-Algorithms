@@ -15,6 +15,7 @@ class Grid:
                 temp_label = Label(frame, name="label%d%d" % (x, y), text="(%d,%d)" % (x, y), bg="red", height=2, width=5)
                 temp_label.grid(row=row, column=x, padx=3, pady=3)
                 temp_label.bind("<Button-1>", self.leftclick)
+                self.labels.append(temp_label)
 
     def leftclick(self, event):
         x_pos = event.x
@@ -22,10 +23,5 @@ class Grid:
         caller = event.widget
         print("(%d,%d)" % (x_pos, y_pos))
         print("widget= %s" % caller)
+        caller.config(bg="white")
 
-
-root = Tk()
-
-g = Grid(root, 10, 10)
-
-root.mainloop()
