@@ -1,21 +1,22 @@
 from Node import Node
 from tkinter import *
 from View import Grid
+import time
+import re
 
 root = Tk()
 
-g = Grid(root, 10, 10)
-
-WIDTH_OF_GRID = 10   # type: int
-HEIGHT_OF_GRID = 10  # type: int
+WIDTH_OF_GRID = 15  # type: int
+HEIGHT_OF_GRID = 15  # type: int
 
 # constant list of nodes holding all the nodes on the grid
 node_list = []
 
 # initialize the starting node and the target node
 # these variables will later point to a node inside the node list above
-starting_node = Node(0,0)
-target_node = Node(0,0)
+starting_node = Node(0, 0)
+target_node = Node(0, 0)
+obstacle_nodes = []
 
 # Create the list of nodes from the grid height and width
 # The list will contains the nodes in order of columns starting from
@@ -26,7 +27,7 @@ for x in range(WIDTH_OF_GRID):
         node_list.append(new_node)
 
 
-def declare_starting_node(x,y):
+def declare_starting_node(x, y):
     # from the x,y location, we can get the corresponding node in the list
     # given (x,y) = (0,5) we want the sixth element so index 5
     # given (x,y) = (1,5) we want the x * height + y ( i.e index 15 if height is 10)
@@ -34,9 +35,10 @@ def declare_starting_node(x,y):
     # make the global variable start node point to the right index inside node list
     global starting_node
     starting_node = node_list[index]
+    modify_label("red", starting_node)
 
 
-def declare_target_node(x,y):
+def declare_target_node(x, y):
     # from the x,y location, we can get the corresponding node in the list
     # given (x,y) = (0,5) we want the sixth element so index 5
     # given (x,y) = (1,5) we want the x * height + y ( i.e index 15 if height is 10)
@@ -44,6 +46,7 @@ def declare_target_node(x,y):
     # make the global variable start node point to the right index inside node list
     global target_node
     target_node = node_list[index]
+    modify_label("green", target_node)
 
 
 """This method return at most 8 nodes, 5 nodes if it hugs a border and at least 3 nodes if it is a corner"""
@@ -124,12 +127,6 @@ def get_neighbours(node):
     return neighbours
 
 
-declare_starting_node(0, 0)
-declare_target_node(HEIGHT_OF_GRID - 3, HEIGHT_OF_GRID - 1)
-starting_node.compute_g_h_f(None, target_node)
-target_node.compute_g_h_f(None, target_node)
-
-
 def a_star_algorithm():
     # list of nodes to be visited
     open_nodes = []
@@ -142,8 +139,8 @@ def a_star_algorithm():
     # outer loop that runs until we get to the target
     while True:
         print("Open nodes:")
-        for open in open_nodes:
-            print("(x,y) : (%d, %d)  f cost = %d" % (open.x_cord, open.y_cord, open.f_value))
+        for open_node in open_nodes:
+            print("(x,y) : (%d, %d)  f cost = %d" % (open_node.x_cord, open_node.y_cord, open_node.f_value))
         print("\n\n")
 
         # current node becomes the current node with the lowest f value
@@ -158,6 +155,8 @@ def a_star_algorithm():
         # now we have a new current node which we visit, hence we remove it from open to closed nodes
         open_nodes.remove(current_node)
         closed_nodes.append(current_node)
+        if current_node is not starting_node:
+            modify_label("blue", current_node)
 
         # exit the while loop and the algorithm when we are at the target node
         if current_node == target_node:
@@ -175,20 +174,29 @@ def a_star_algorithm():
             if neighbour in closed_nodes:
                 continue
 
+            global obstacle_nodes
             # if we are first discovering this node, set the parent and compute the f cost
             if neighbour not in open_nodes:
+                # if the node is an obstacle, we should not visit it since it is unreachable
+                if neighbour in obstacle_nodes:
+                    continue
                 neighbour.parent_node = current_node
                 neighbour.compute_g_h_f(current_node, target_node)
                 open_nodes.append(neighbour)
+                if neighbour is not target_node:
+                    modify_label("light blue", neighbour)
             # if we had already discovered this node, check if the path from the current node as
-            # parent node to the neighbour yields a lesser f value. If som change it.
+            # parent node to the neighbour yields a lesser f value. If so change it.
             else:
                 temp_node = Node(neighbour.x_cord, neighbour.y_cord)
                 temp_node.parent_node = current_node
                 temp_node.compute_g_h_f(current_node, target_node)
                 # if the temporary f value is less, swap the parent node of the neighbour to the current node
                 if temp_node.f_value < neighbour.f_value:
+                    # set the new parent node of the neighbour
                     neighbour.parent_node = current_node
+                    # recalculate its updated f value with the new parent
+                    neighbour.compute_g_h_f(current_node, target_node)
 
     # end of a star algorithm
     return
@@ -199,26 +207,87 @@ def draw_path():
     current_node = target_node
     while current_node.parent_node is not None:
         print("(x,y) : (%d, %d)" % (current_node.x_cord, current_node.y_cord))
-        modify_label("white", current_node.x_cord, current_node.y_cord)
+        modify_label("green", current_node)
         current_node = current_node.parent_node
     print("(x,y) : (%d, %d)" % (current_node.x_cord, current_node.y_cord))
-    modify_label("white", current_node.x_cord, current_node.y_cord)
 
 
-def modify_label(color, grid_x, grid_y):
-    index = HEIGHT_OF_GRID * grid_y + grid_x
+def modify_label(color, node):
+    index = HEIGHT_OF_GRID * node.y_cord + node.x_cord
     print(index)
-    label = g.labels[index]
+    label = labels[index]
     label.config(bg="%s" % color)
+    label.config(text="%d" % node.g_value)
+    root.update()
+    time.sleep(0.05)
 
 
-a_star_algorithm()
-draw_path()
+def left_click(event):
+    caller = event.widget
+    label_name = "%s" % caller
+
+    print(event.x)
+
+    # The name of a widget is always .!frame.label<x>+<y>, i.e. .!frame.label5+7
+    # catch both digit group using regex
+    pattern = '([0-9]+)\+([0-9]+)'
+    match = re.search(pattern, label_name)
+
+    x_pos = match.group(1)
+    y_pos = match.group(2)
+
+    caller.config(bg="gray20")
+
+    # get the obstacle node from its x and y cord
+    index = int(x_pos) * HEIGHT_OF_GRID + int(y_pos)
+    new_obstacle = node_list[index]
+
+    # now add the clicked node to the list of obstacle nodes
+    global obstacle_nodes
+    obstacle_nodes.append(new_obstacle)
+
+
+def left_click_held_down(event):
+    caller = event.widget
+    label_name = "%s" % caller
+
+    print(label_name)
+
+
+def solve_button_clicked():
+    for node in obstacle_nodes:
+        print("(x,y) : (%d, %d)" % (node.x_cord, node.y_cord))
+    a_star_algorithm()
+    draw_path()
+
+
+top_frame = Frame(root, bg="black")
+top_frame.pack(side="top")
+top_frame.bind("<B1-Motion>", left_click_held_down)
+
+bottom_frame = Frame(root, height=200, bg="white")
+bottom_frame.pack(side="bottom")
+
+solve_button = Button(bottom_frame, text="Solve", command=solve_button_clicked)
+solve_button.pack()
+
+labels = []
+
+for y in range(HEIGHT_OF_GRID):
+    for x in range(WIDTH_OF_GRID):
+        row = HEIGHT_OF_GRID - 1 - y
+        print("(%d,%d)" % (x, row))
+        temp_label = Label(top_frame, name="label%d+%d" % (x, y), bg="white", height=2, width=5)
+        temp_label.grid(row=row, column=x, padx=3, pady=3)
+        temp_label.bind("<Button-1>", left_click)
+        labels.append(temp_label)
+
+declare_starting_node(0, 0)
+declare_target_node(HEIGHT_OF_GRID - 1, HEIGHT_OF_GRID - 1)
+starting_node.compute_g_h_f(None, target_node)
+target_node.compute_g_h_f(None, target_node)
+
+print(top_frame.winfo_width())
+print(top_frame.winfo_height())
 
 root.mainloop()
-
-
-
-
-
-
